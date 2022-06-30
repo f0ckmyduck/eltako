@@ -2,7 +2,7 @@ mod busio;
 mod ringbuff;
 
 fn main() {
-    let mut ctx = busio::SerialInterface::new("/dev/ttyUSB0".to_string(), 57600, 100);
+    let mut ctx = busio::SerialInterface::new("/dev/ttyUSB0".to_string(), 57600, 10);
 
     let data_lock = ctx.shared.clone();
 
@@ -20,8 +20,13 @@ fn main() {
         {
             let mut data = data_lock.lock().unwrap();
 
-            println!("{} ", data.buff.reduce().unwrap());
+            while let Ok(i) = data.buff.reduce() {
+                if i == 0xa5 {
+                    println!("");
+                }
+                print!("{:#2x} ", i);
+            }
         }
-        std::thread::sleep(std::time::Duration::from_millis(10));
+        std::thread::sleep(std::time::Duration::from_millis(100));
     }
 }

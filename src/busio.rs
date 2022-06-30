@@ -37,7 +37,7 @@ impl SerialInterface {
 
         let shared_lock = self.shared.clone();
 
-        self.listener = Some(spawn(move || loop {
+        self.listener = Some(spawn(move || {
             // Get the thread configuration variables out of the shared struct
             let (mut port, refresh_rate) = {
                 let shared = shared_lock.lock().unwrap();
@@ -50,26 +50,23 @@ impl SerialInterface {
                 )
             };
 
-            let mut temp_read_buff: [u8; 1024] = [0; 1024];
-            let ret = port.read(&mut temp_read_buff);
+            loop {
+                let mut temp_read_buff: [u8; 32] = [0; 32];
+                let ret = port.read(&mut temp_read_buff);
 
-            if ret.is_ok() {
-                println!("What");
-                // Write the used portion of the buffer out to the ring buffer
-                {
-                    let mut shared = shared_lock.lock().unwrap();
+                if ret.is_ok() {
+                    // Write the used portion of the buffer out to the ring buffer
+                    {
+                        let mut shared = shared_lock.lock().unwrap();
 
-                    for i in 0..ret.unwrap() {
-                        shared.buff.append(temp_read_buff[i]).unwrap();
+                        for i in 0..ret.unwrap() {
+                            shared.buff.append(temp_read_buff[i]).unwrap();
+                            // println!(" !{:#2x}! ", temp_read_buff[i]);
+                        }
                     }
                 }
-
-                for i in temp_read_buff {
-                    print!("{:#2x} ", i);
-                }
-                println!("");
+                sleep(Duration::from_millis(refresh_rate));
             }
-            sleep(Duration::from_millis(refresh_rate));
         }));
     }
 }
