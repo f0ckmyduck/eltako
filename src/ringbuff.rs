@@ -6,6 +6,7 @@ pub struct RingBuff<T: Copy> {
     pub data: Vec<T>,
     pub write_offset: usize,
     pub read_offset: usize,
+    pub wrap_flag: bool,
 }
 impl<T: Copy + Debug> RingBuff<T> {
     pub fn new(initial_size: usize) -> Self {
@@ -13,14 +14,7 @@ impl<T: Copy + Debug> RingBuff<T> {
             data: Vec::with_capacity(initial_size),
             write_offset: 0,
             read_offset: 0,
-        }
-    }
-
-    pub fn check_wrap(&self, offset: usize) -> usize {
-        if offset + 1 < self.data.len() {
-            return offset + 1;
-        } else {
-            return 0;
+            wrap_flag: false,
         }
     }
 
@@ -28,7 +22,12 @@ impl<T: Copy + Debug> RingBuff<T> {
         // Check if the ring buffer has to wrap around
         self.data[self.write_offset] = appendage;
 
-        self.write_offset = self.check_wrap(self.write_offset);
+        if self.write_offset < self.data.len() {
+            self.write_offset += 1;
+        } else {
+            self.write_offset = 0;
+            self.wrap_flag = true;
+        }
 
         return Ok(());
     }
@@ -36,7 +35,14 @@ impl<T: Copy + Debug> RingBuff<T> {
     pub fn reduce(&mut self) -> Result<T, ()> {
         let temp = self.data[self.read_offset];
 
-        self.read_offset = self.check_wrap(self.read_offset);
+        if self.read_offset < self.data.len() && self.read_offset < self.write_offset {
+            self.read_offset += 1;
+        }
+
+        if self.wrap_flag {
+            self.read_offset = 0;
+            self.wrap_flag = false;
+        }
 
         return Ok(temp.clone());
     }
