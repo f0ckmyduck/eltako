@@ -17,6 +17,7 @@ pub struct SerialInterface {
 }
 
 impl SerialInterface {
+    /// Constructs a new SerialInterface struct with a default ring buffer size of 1000 bytes.
     pub fn new(path: String, baudrate: u32, refresh_rate: u64) -> Self {
         SerialInterface {
             listener: None,
@@ -31,6 +32,9 @@ impl SerialInterface {
         }
     }
 
+    /// Starts the listener thread.
+    /// The listener thread reads serial data into the ring buffer at
+    /// a specific size per iteration.
     pub fn start(&mut self) {
         use std::thread::{sleep, spawn};
         use std::time::Duration;
@@ -40,8 +44,12 @@ impl SerialInterface {
         self.listener = Some(spawn(move || {
             // Get the thread configuration variables out of the shared struct
             let (mut port, refresh_rate) = {
-                let shared = shared_lock.lock().unwrap();
+                let mut shared = shared_lock.lock().unwrap();
 
+                // Initialize the buffer
+                for _ in 0..1000 {
+                    shared.buff.data.push(0);
+                }
                 (
                     serialport::new(shared.path.clone(), shared.baudrate)
                         .open()
