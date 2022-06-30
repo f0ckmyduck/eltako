@@ -19,7 +19,6 @@ impl<T: Copy + Debug> RingBuff<T> {
     }
 
     pub fn append(&mut self, appendage: T) -> Result<(), ()> {
-        // Check if the ring buffer has to wrap around
         self.data[self.write_offset] = appendage;
 
         if self.write_offset < self.data.len() {
@@ -37,6 +36,8 @@ impl<T: Copy + Debug> RingBuff<T> {
 
         if self.read_offset < self.data.len() && self.read_offset < self.write_offset {
             self.read_offset += 1;
+        } else {
+            return Err(());
         }
 
         if self.wrap_flag {
