@@ -28,7 +28,7 @@ impl SerialInterface {
                 baudrate,
                 refresh_rate,
 
-                buff: RingBuff::new(1000),
+                buff: RingBuff::new(1000, 0),
             })),
         }
     }
@@ -40,7 +40,7 @@ impl SerialInterface {
         use std::thread::{sleep, spawn};
         use std::time::Duration;
 
-        if self.listener.is_none() {
+        if self.listener.is_some() {
             return Err(());
         }
 
@@ -50,12 +50,8 @@ impl SerialInterface {
             info!("Listener started!");
             // Get the thread configuration variables out of the shared struct
             let (mut port, refresh_rate) = {
-                let mut shared = shared_lock.lock().unwrap();
+                let shared = shared_lock.lock().unwrap();
 
-                // Initialize the buffer
-                for _ in 0..1000 {
-                    shared.buff.data.push(0);
-                }
                 (
                     serialport::new(shared.path.clone(), shared.baudrate)
                         .open()

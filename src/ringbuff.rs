@@ -9,9 +9,15 @@ pub struct RingBuff<T: Copy> {
     pub wrap_flag: bool,
 }
 impl<T: Copy + Debug> RingBuff<T> {
-    pub fn new(initial_size: usize) -> Self {
+    pub fn new(initial_size: usize, initial_value: T) -> Self {
+        let mut temp = Vec::new();
+
+        for _ in 0..initial_size {
+            temp.push(initial_value);
+        }
+
         RingBuff {
-            data: Vec::with_capacity(initial_size),
+            data: temp,
             write_offset: 0,
             read_offset: 0,
             wrap_flag: false,
