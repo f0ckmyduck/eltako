@@ -33,7 +33,7 @@ impl EltakoFrame {
         let mut crc: u8 = 0;
 
         for i in 2..(frame.len() - 1) {
-            crc += frame[i];
+            (crc, _) = crc.overflowing_add(frame[i]);
         }
 
         if frame[13] != crc {

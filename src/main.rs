@@ -29,12 +29,10 @@ fn main() {
             }
 
             if bytecounter >= 14 {
-                debug!(
-                    "{}",
-                    eldecode::EltakoFrame::from_vec(&temp.data[0..14])
-                        .unwrap()
-                        .explain()
-                );
+                let decoded_frame = eldecode::EltakoFrame::from_vec(&temp.data[0..14]);
+                if let Ok(frame) = decoded_frame {
+                    info!("{}", frame.explain());
+                }
                 temp.reset_offset();
                 bytecounter = 0;
             }
