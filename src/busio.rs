@@ -74,8 +74,9 @@ impl SerialInterface {
                             debug!("Received: {:#2x}", temp_read_buff[i]);
                         }
                     }
+                } else {
+                    sleep(Duration::from_millis(refresh_rate));
                 }
-                sleep(Duration::from_millis(refresh_rate));
             }
         }));
 
