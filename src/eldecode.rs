@@ -1,4 +1,4 @@
-use log::{debug, error};
+use log::error;
 
 #[derive(Debug)]
 pub struct EltakoFrame {
@@ -53,32 +53,51 @@ impl EltakoFrame {
     }
 
     pub fn explain(&self) -> std::string::String {
+        let msg_rorg;
+        let mut msg_data = "None";
+        let mut msg_status = "None";
+
         // Message type apparently?
-        let msg_type = match self.rorg {
-            0x5 => "Button",
-            0x7 => "Dimmer",
-            _ => "None",
-        };
+        match self.rorg {
+            0x5 => {
+                msg_rorg = "Button";
 
-        // Frame payload
-        let msg_data = match self.data.to_be_bytes()[0] {
-            0x02 => "Dimming",
-            0x70 => "Top Right",
-            0x30 => "Top Left",
-            0x10 => "Bot Left",
-            0x50 => "Bot Right",
-            _ => "None",
-        };
+                // Frame payload
+                msg_data = match self.data.to_be_bytes()[0] {
+                    0x70 => "Top Right",
+                    0x30 => "Top Left",
+                    0x10 => "Bot Left",
+                    0x50 => "Bot Right",
+                    _ => "None",
+                };
 
-        let msg_status = match self.status {
-            0x30 => "On",
-            0x20 => "Off",
-            _ => "None",
-        };
+                msg_status = match self.status {
+                    0x30 => "On",
+                    0x20 => "Off",
+                    _ => "None",
+                };
+            }
+            0x7 => {
+                msg_rorg = "Dimmer";
+
+                // Frame payload
+                msg_data = match self.data.to_be_bytes()[0] {
+                    0x02 => "Dimming",
+                    _ => "None",
+                };
+            }
+            0xf0 => {
+                msg_rorg = "Scan";
+            }
+            0xfe => {
+                msg_rorg = "Status";
+            }
+            _ => msg_rorg = "None",
+        }
 
         format!(
-            "rorg:{:<6} | data:{:<10} -> 0x{:08x} | source_addr:0x{:08x} | status:{:<3} ->0x{:01x}",
-            msg_type, msg_data, self.data, self.source, msg_status, self.status
+            "rorg:{:<6} -> 0x{:01x} | data:{:<10} -> 0x{:08x} | source_addr:0x{:08x} | status:{:<3} ->0x{:01x}",
+            msg_rorg, self.rorg, msg_data, self.data, self.source, msg_status, self.status
         )
     }
 }
