@@ -1,6 +1,4 @@
-use std::vec::Vec;
-
-struct EltakoFrame {
+pub struct EltakoFrame {
     length: u8,
     rorg: u8,
     data: u32,
