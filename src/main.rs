@@ -14,7 +14,6 @@ fn main() {
 
     let mut bytecounter = 0;
     let data_lock = serial.shared.clone();
-    let mut frames: Vec<eldecode::EltakoFrame> = Vec::new();
     let mut temp = ringbuff::RingBuff::new(14, 0);
 
     let decoder = spawn(move || loop {
@@ -30,11 +29,12 @@ fn main() {
             }
 
             if bytecounter >= 14 {
-                if let Some(last) = frames.last() {
-                    debug!("{}", last.explain());
-                }
-
-                frames.push(eldecode::EltakoFrame::from_vec(&temp.data[0..14]).unwrap());
+                debug!(
+                    "{}",
+                    eldecode::EltakoFrame::from_vec(&temp.data[0..14])
+                        .unwrap()
+                        .explain()
+                );
                 temp.reset_offset();
                 bytecounter = 0;
             }

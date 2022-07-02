@@ -1,3 +1,5 @@
+use log::{debug, error};
+
 #[derive(Debug)]
 pub struct EltakoFrame {
     pub pre: u16,
@@ -23,6 +25,22 @@ impl EltakoFrame {
             return Err(());
         }
 
+        if frame[0] != 0xa5 || frame[1] != 0x5a {
+            error!("Message has an invalid preamble!");
+            return Err(());
+        }
+
+        let mut crc: u8 = 0;
+
+        for i in 2..(frame.len() - 1) {
+            crc += frame[i];
+        }
+
+        if frame[13] != crc {
+            error!("Message crc check failed!");
+            return Err(());
+        }
+
         Ok(EltakoFrame {
             pre: EltakoFrame::collect_to_u16(&frame[0..2]),
             length: frame[2],
@@ -35,11 +53,6 @@ impl EltakoFrame {
     }
 
     pub fn explain(&self) -> std::string::String {
-        let pre_type = match self.pre {
-            0xa55a => "OK",
-            _ => "Err",
-        };
-
         // Message type apparently?
         let msg_type = match self.rorg {
             0x5 => "Button",
@@ -50,12 +63,22 @@ impl EltakoFrame {
         // Frame payload
         let msg_data = match self.data.to_be_bytes()[0] {
             0x02 => "Dimming",
+            0x70 => "Top Right",
+            0x30 => "Top Left",
+            0x10 => "Bot Left",
+            0x50 => "Bot Right",
+            _ => "None",
+        };
+
+        let msg_status = match self.status {
+            0x30 => "On",
+            0x20 => "Off",
             _ => "None",
         };
 
         format!(
-            "{:<3} > rorg:{:<6} | data:{:<10} -> 0x{:08x} | source_addr:0x{:08x} | status:0x{:01x}",
-            pre_type, msg_type, msg_data, self.data, self.source, self.status
+            "rorg:{:<6} | data:{:<10} -> 0x{:08x} | source_addr:0x{:08x} | status:{:<3} ->0x{:01x}",
+            msg_type, msg_data, self.data, self.source, msg_status, self.status
         )
     }
 }
