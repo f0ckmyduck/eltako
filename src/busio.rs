@@ -70,7 +70,7 @@ impl SerialInterface {
                         let mut shared = shared_lock.lock().unwrap();
 
                         for i in 0..ret.unwrap() {
-                            shared.buff.append(temp_read_buff[i]).unwrap();
+                            shared.buff.append(temp_read_buff[i]);
                             debug!("Received: {:#2x}", temp_read_buff[i]);
                         }
                     }
