@@ -1,4 +1,4 @@
-use log::debug;
+use log::info;
 use std::thread::spawn;
 
 mod busio;
