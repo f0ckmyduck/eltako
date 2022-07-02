@@ -1,30 +1,26 @@
+use log::debug;
+
 mod busio;
+mod eldecode;
 mod ringbuff;
 
 fn main() {
-    let mut ctx = busio::SerialInterface::new("/dev/ttyUSB0".to_string(), 57600, 10);
+    env_logger::init();
 
-    let data_lock = ctx.shared.clone();
+    let mut serial = busio::SerialInterface::new("/dev/ttyUSB0".to_string(), 57600, 10);
 
-    {
-        let mut data = data_lock.lock().unwrap();
+    serial.start().expect("Listener already initialized!");
 
-        for _ in 0..1000 {
-            data.buff.data.push(0);
-        }
-    }
-
-    ctx.start();
-
+    let data_lock = serial.shared.clone();
     loop {
         {
             let mut data = data_lock.lock().unwrap();
 
             while let Ok(i) = data.buff.reduce() {
                 if i == 0xa5 {
-                    println!("");
+                    debug!("");
                 }
-                print!("{:#2x} ", i);
+                debug!("{:#2x} ", i);
             }
         }
         std::thread::sleep(std::time::Duration::from_millis(100));

@@ -1,4 +1,5 @@
 use crate::ringbuff::RingBuff;
+use log::{debug, info};
 use std::string::String;
 use std::sync::{Arc, Mutex};
 
@@ -35,13 +36,18 @@ impl SerialInterface {
     /// Starts the listener thread.
     /// The listener thread reads serial data into the ring buffer at
     /// a specific size per iteration.
-    pub fn start(&mut self) {
+    pub fn start(&mut self) -> Result<(), ()> {
         use std::thread::{sleep, spawn};
         use std::time::Duration;
+
+        if self.listener.is_none() {
+            return Err(());
+        }
 
         let shared_lock = self.shared.clone();
 
         self.listener = Some(spawn(move || {
+            info!("Listener started!");
             // Get the thread configuration variables out of the shared struct
             let (mut port, refresh_rate) = {
                 let mut shared = shared_lock.lock().unwrap();
@@ -69,12 +75,14 @@ impl SerialInterface {
 
                         for i in 0..ret.unwrap() {
                             shared.buff.append(temp_read_buff[i]).unwrap();
-                            // println!(" !{:#2x}! ", temp_read_buff[i]);
+                            debug!("Received: {:#2x}", temp_read_buff[i]);
                         }
                     }
                 }
                 sleep(Duration::from_millis(refresh_rate));
             }
         }));
+
+        Ok(())
     }
 }
