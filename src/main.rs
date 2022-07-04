@@ -8,7 +8,7 @@ mod ringbuff;
 fn main() {
     env_logger::init();
 
-    let mut serial = busio::SerialInterface::new("/dev/ttyUSB0".to_string(), 57600, 10);
+    let mut serial = busio::SerialInterface::new("/dev/ttyUSB0".to_string(), 57600, 1);
 
     serial.start().expect("Listener already initialized!");
 
@@ -37,7 +37,7 @@ fn main() {
                 bytecounter = 0;
             }
         }
-        std::thread::sleep(std::time::Duration::from_millis(100));
+        std::thread::sleep(std::time::Duration::from_millis(1));
     });
 
     decoder.join().expect("Could not join decoder");
