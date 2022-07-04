@@ -21,6 +21,15 @@ impl EltakoFrame {
         (data[0] as u16) << 8 | (data[1] as u16)
     }
 
+    pub fn calc_crc(frame: &[u8]) -> u8 {
+        let mut crc: u8 = 0;
+
+        for i in 2..(frame.len() - 1) {
+            (crc, _) = crc.overflowing_add(frame[i]);
+        }
+        crc
+    }
+
     pub fn from_vec(frame: &[u8]) -> Result<Self, ()> {
         if frame.len() < 14 {
             return Err(());
@@ -31,13 +40,7 @@ impl EltakoFrame {
             return Err(());
         }
 
-        let mut crc: u8 = 0;
-
-        for i in 2..(frame.len() - 1) {
-            (crc, _) = crc.overflowing_add(frame[i]);
-        }
-
-        if frame[13] != crc {
+        if frame[13] != EltakoFrame::calc_crc(frame) {
             error!("Message crc check failed!");
             return Err(());
         }
