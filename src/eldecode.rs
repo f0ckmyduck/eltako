@@ -1,15 +1,14 @@
 use log::error;
 use std::string::String;
+use std::vec::Vec;
 
 #[derive(Debug)]
 pub struct EltakoFrame {
-    pub pre: u16,
     pub length: u8,
     pub rorg: u8,
     pub data: u32,
     pub source: u32,
     pub status: u8,
-    pub crc: u8,
 }
 
 impl EltakoFrame {
@@ -21,13 +20,32 @@ impl EltakoFrame {
         (data[0] as u16) << 8 | (data[1] as u16)
     }
 
-    pub fn calc_crc(frame: &[u8]) -> u8 {
+    pub fn crc_from_vec(frame: &[u8]) -> u8 {
         let mut crc: u8 = 0;
 
         for i in 2..(frame.len() - 1) {
             (crc, _) = crc.overflowing_add(frame[i]);
         }
-        crc
+        return crc;
+    }
+
+    pub fn crc_from_frame(self) -> u8 {
+        let mut crc: u8 = 0;
+
+        (crc, _) = crc.overflowing_add(self.length);
+        (crc, _) = crc.overflowing_add(self.rorg);
+
+        for i in 0..4 {
+            (crc, _) = crc.overflowing_add(self.data.to_be_bytes()[i]);
+        }
+
+        for i in 0..4 {
+            (crc, _) = crc.overflowing_add(self.source.to_be_bytes()[i]);
+        }
+
+        (crc, _) = crc.overflowing_add(self.status);
+
+        return crc;
     }
 
     pub fn from_vec(frame: &[u8]) -> Result<Self, ()> {
@@ -40,20 +58,40 @@ impl EltakoFrame {
             return Err(());
         }
 
-        if frame[13] != EltakoFrame::calc_crc(frame) {
+        if frame[13] != EltakoFrame::crc_from_vec(frame) {
             error!("Message crc check failed!");
             return Err(());
         }
 
         Ok(EltakoFrame {
-            pre: EltakoFrame::collect_to_u16(&frame[0..2]),
             length: frame[2],
             rorg: frame[3],
             data: EltakoFrame::collect_to_u32(&frame[4..8]),
             source: EltakoFrame::collect_to_u32(&frame[8..12]),
             status: frame[12],
-            crc: frame[13],
         })
+    }
+
+    pub fn to_vec(self) -> Vec<u8> {
+        let mut frame = Vec::new();
+
+        frame.push(0xa5);
+        frame.push(0x5a);
+        frame.push(self.length);
+        frame.push(self.rorg);
+
+        for i in 0..4 {
+            frame.push(self.data.to_be_bytes()[i]);
+        }
+
+        for i in 0..4 {
+            frame.push(self.source.to_be_bytes()[i]);
+        }
+
+        frame.push(self.status);
+        frame.push(EltakoFrame::crc_from_frame(self));
+
+        return frame;
     }
 
     pub fn explain(&self) -> String {
