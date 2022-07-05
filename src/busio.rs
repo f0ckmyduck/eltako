@@ -1,5 +1,5 @@
 use crate::ringbuff::RingBuff;
-use log::{debug, info};
+use log::debug;
 use std::string::String;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
@@ -102,7 +102,7 @@ impl Drop for SerialInterface {
             .take()
             .unwrap()
             .join()
-            .expect("Could not join listener Thread!");
+            .expect("Could not join listener thread!");
 
         debug!("Listener thread stopped!");
     }
