@@ -1,6 +1,8 @@
 use crate::ringbuff::RingBuff;
 use log::{debug, info};
 use std::string::String;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 
 pub struct SerialShared {
@@ -14,6 +16,7 @@ pub struct SerialShared {
 pub struct SerialInterface {
     listener: Option<std::thread::JoinHandle<()>>,
 
+    exit: Arc<AtomicBool>,
     pub shared: Arc<Mutex<SerialShared>>,
 }
 
@@ -21,8 +24,6 @@ impl SerialInterface {
     /// Constructs a new SerialInterface struct with a default ring buffer size of 1000 bytes.
     pub fn new(path: String, baudrate: u32, refresh_rate: u64) -> Self {
         SerialInterface {
-            listener: None,
-
             shared: Arc::new(Mutex::new(SerialShared {
                 path,
                 baudrate,
@@ -30,6 +31,9 @@ impl SerialInterface {
 
                 buff: RingBuff::new(1000, 0),
             })),
+
+            exit: Arc::new(AtomicBool::new(false)),
+            listener: None,
         }
     }
 
@@ -44,6 +48,7 @@ impl SerialInterface {
             return Err(());
         }
 
+        let exit = self.exit.clone();
         let shared_lock = self.shared.clone();
 
         self.listener = Some(spawn(move || {
@@ -61,6 +66,10 @@ impl SerialInterface {
             };
 
             loop {
+                if exit.load(Ordering::Relaxed) {
+                    break;
+                }
+
                 let mut temp_read_buff: [u8; 32] = [0; 32];
                 let ret = port.read(&mut temp_read_buff);
 
@@ -81,5 +90,20 @@ impl SerialInterface {
         }));
 
         Ok(())
+    }
+}
+
+impl Drop for SerialInterface {
+    fn drop(&mut self) {
+        let exit = self.exit.clone();
+
+        exit.store(true, Ordering::Relaxed);
+        self.listener
+            .take()
+            .unwrap()
+            .join()
+            .expect("Could not join listener Thread!");
+
+        debug!("Listener thread stopped!");
     }
 }
