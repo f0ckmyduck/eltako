@@ -2,7 +2,7 @@ use crate::busio::SerialInterface;
 use crate::eldecode::EltakoFrame;
 use crate::ringbuff::RingBuff;
 
-use log::{debug, info};
+use log::{debug, error, info};
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -52,6 +52,8 @@ impl Bus {
                     let decoded_frame = EltakoFrame::from_vec(&temp.data[0..14]);
                     if let Ok(frame) = decoded_frame {
                         info!("{}", frame.explain());
+                    } else {
+                        error!("Decode failed on data: {:x?}", &temp.data[0..14]);
                     }
                     temp.reset_offset();
                     bytecounter = 0;
