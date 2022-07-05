@@ -52,7 +52,7 @@ impl SerialInterface {
         let shared_lock = self.shared.clone();
 
         self.listener = Some(spawn(move || {
-            info!("Listener started!");
+            debug!("Listener started!");
             // Get the thread configuration variables out of the shared struct
             let (mut port, refresh_rate) = {
                 let shared = shared_lock.lock().unwrap();
