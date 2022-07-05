@@ -38,11 +38,9 @@ impl Bus {
             loop {
                 if exit_lock.load(Ordering::Relaxed) {
                     break;
-                }
+                };
 
-                let mut data = data_lock.lock().unwrap();
-
-                while let Ok(i) = data.buff.reduce() {
+                while let Ok(i) = data_lock.lock().unwrap().buff.reduce() {
                     if i == 0xa5 {
                         bytecounter = 0;
                     }
