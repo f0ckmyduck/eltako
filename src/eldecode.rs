@@ -2,7 +2,7 @@ use log::error;
 use std::string::String;
 use std::vec::Vec;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct EltakoFrame {
     pub length: u8,
     pub rorg: u8,
