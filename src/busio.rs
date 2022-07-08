@@ -9,13 +9,13 @@ use crate::eldecode::EltakoFrame;
 
 pub struct SerialShared {
     refresh_rate: u64,
-    port: Box<dyn serialport::SerialPort>,
+    serial_port: Box<dyn serialport::SerialPort>,
 
-    pub buff: RingBuff<EltakoFrame>,
+    pub frame_buffer: RingBuff<EltakoFrame>,
 }
 
 pub struct SerialInterface {
-    listener: Option<std::thread::JoinHandle<()>>,
+    listener_handle: Option<std::thread::JoinHandle<()>>,
 
     exit: Arc<AtomicBool>,
     pub shared: Arc<Mutex<SerialShared>>,
@@ -27,11 +27,11 @@ impl SerialInterface {
         SerialInterface {
             shared: Arc::new(Mutex::new(SerialShared {
                 refresh_rate,
-                port: serialport::new(path, baudrate)
+                serial_port: serialport::new(path, baudrate)
                     .open()
                     .expect("Failed to open port!"),
 
-                buff: RingBuff::new(
+                frame_buffer: RingBuff::new(
                     1000,
                     EltakoFrame {
                         length: 0,
@@ -44,7 +44,7 @@ impl SerialInterface {
             })),
 
             exit: Arc::new(AtomicBool::new(false)),
-            listener: None,
+            listener_handle: None,
         }
     }
 
@@ -55,7 +55,7 @@ impl SerialInterface {
         use std::thread::{sleep, spawn};
         use std::time::Duration;
 
-        if self.listener.is_some() {
+        if self.listener_handle.is_some() {
             return Err(());
         }
 
@@ -63,7 +63,7 @@ impl SerialInterface {
         let shared_lock = self.shared.clone();
 
         // Setup the listener thread
-        self.listener = Some(spawn(move || {
+        self.listener_handle = Some(spawn(move || {
             debug!("Listener started!");
 
             let mut temp = RingBuff::new(100, 0);
@@ -80,7 +80,7 @@ impl SerialInterface {
                 let ret = {
                     let mut shared = shared_lock.lock().unwrap();
 
-                    shared.port.read(&mut read_buff)
+                    shared.serial_port.read(&mut read_buff)
                 };
 
                 if ret.is_ok() {
@@ -104,7 +104,7 @@ impl SerialInterface {
                                 let mut shared = shared_lock.lock().unwrap();
 
                                 info!("{}", frame.explain());
-                                shared.buff.append(frame);
+                                shared.frame_buffer.append(frame);
                             } else {
                                 error!("Decode failed on data: {:x?}", frame_bytes);
                             }
@@ -122,7 +122,7 @@ impl SerialInterface {
         let shared_lock = self.shared.clone();
         let mut shared = shared_lock.lock().unwrap();
 
-        if shared.port.write_all(&frame.to_vec()[..]).is_err() {
+        if shared.serial_port.write_all(&frame.to_vec()[..]).is_err() {
             error!("Failed to write: {:x?}", frame);
             return Err(());
         }
@@ -135,7 +135,7 @@ impl Drop for SerialInterface {
         let exit = self.exit.clone();
 
         exit.store(true, Ordering::Relaxed);
-        self.listener
+        self.listener_handle
             .take()
             .unwrap()
             .join()
