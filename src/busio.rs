@@ -52,7 +52,8 @@ impl SerialInterface {
     /// The listener thread reads serial data into a temporary buffer. This data is furthermore
     /// decoded using the EltakoFrame struct and saved in a ring buffer which is public.
     pub fn start(&mut self) -> Result<(), ()> {
-        use std::thread::{sleep, spawn};
+        use std::thread;
+        use std::thread::sleep;
         use std::time::Duration;
 
         if self.listener_handle.is_some() {
@@ -63,57 +64,64 @@ impl SerialInterface {
         let shared_lock = self.shared.clone();
 
         // Setup the listener thread
-        self.listener_handle = Some(spawn(move || {
-            debug!("Listener started!");
+        match thread::Builder::new()
+            .name("Listener".to_string())
+            .spawn(move || {
+                debug!("Listener started!");
 
-            let mut temp = RingBuff::new(100, 0);
+                let mut temp = RingBuff::new(100, 0);
 
-            loop {
-                // Break if the struct is dropped.
-                if exit.load(Ordering::Relaxed) {
-                    break;
-                }
-
-                let mut read_buff: [u8; 128] = [0; 128];
-
-                // Read data into a temp array
-                let ret = {
-                    let mut shared = shared_lock.lock().unwrap();
-
-                    shared.serial_port.read(&mut read_buff)
-                };
-
-                if ret.is_ok() {
-                    // Write the used portion of the buffer out to the temporary ring buffer.
-                    for i in 0..ret.unwrap() {
-                        debug!("Received: {:#2x}", read_buff[i]);
-                        temp.append(read_buff[i]);
+                loop {
+                    // Break if the struct is dropped.
+                    if exit.load(Ordering::Relaxed) {
+                        break;
                     }
-                } else {
-                    let refresh_rate = shared_lock.lock().unwrap().refresh_rate;
 
-                    sleep(Duration::from_millis(refresh_rate));
-                }
+                    let mut read_buff: [u8; 128] = [0; 128];
 
-                match temp.reduce_search(0xa5) {
-                    Ok(()) => {
-                        if let Ok(frame_bytes) = temp.reduce_slice(14) {
-                            let decoded_frame = EltakoFrame::from_vec(&frame_bytes);
+                    // Read data into a temp array
+                    let ret = {
+                        let mut shared = shared_lock.lock().unwrap();
 
-                            if let Ok(frame) = decoded_frame {
-                                let mut shared = shared_lock.lock().unwrap();
+                        shared.serial_port.read(&mut read_buff)
+                    };
 
-                                info!("{}", frame.explain());
-                                shared.frame_buffer.append(frame);
-                            } else {
-                                error!("Decode failed on data: {:x?}", frame_bytes);
+                    if ret.is_ok() {
+                        // Write the used portion of the buffer out to the temporary ring buffer.
+                        for i in 0..ret.unwrap() {
+                            debug!("Received: {:#2x}", read_buff[i]);
+                            temp.append(read_buff[i]);
+                        }
+                    } else {
+                        let refresh_rate = shared_lock.lock().unwrap().refresh_rate;
+
+                        sleep(Duration::from_millis(refresh_rate));
+                    }
+
+                    match temp.reduce_search(0xa5) {
+                        Ok(()) => {
+                            if let Ok(frame_bytes) = temp.reduce_slice(14) {
+                                let decoded_frame = EltakoFrame::from_vec(&frame_bytes);
+
+                                if let Ok(frame) = decoded_frame {
+                                    let mut shared = shared_lock.lock().unwrap();
+
+                                    info!("{}", frame.explain());
+                                    shared.frame_buffer.append(frame);
+                                } else {
+                                    error!("Decode failed on data: {:x?}", frame_bytes);
+                                }
                             }
                         }
+                        Err(()) => {}
                     }
-                    Err(()) => {}
                 }
+            }) {
+            Ok(x) => self.listener_handle = Some(x),
+            Err(x) => {
+                error!("{}", x);
             }
-        }));
+        }
 
         Ok(())
     }
