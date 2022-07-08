@@ -1,7 +1,11 @@
 use crate::busio::SerialInterface;
+use crate::device::Device;
+use crate::eldecode::EltakoFrame;
+use std::vec::Vec;
 
 pub struct Bus {
     serial: SerialInterface,
+    device_list: Vec<Device>,
 }
 
 impl Bus {
@@ -10,13 +14,59 @@ impl Bus {
 
         let mut bus = Bus {
             serial: SerialInterface::new("/dev/ttyUSB0".to_string(), 57600, 100),
+            device_list: Vec::new(),
         };
 
         bus.serial.start().expect("Listener already initialized!");
         return bus;
     }
 
-    pub fn scan(self) {
-        for i in 0..128 {}
+    pub fn scan(&mut self) -> Result<(), ()> {
+        // Some magic before the scan
+        let frame = EltakoFrame {
+            length: 0xe,
+            rorg: 0xf0,
+            data: 0x03028708,
+            source: 0x04065200,
+            status: 0x00,
+        };
+
+        if self.serial.write(frame).is_err() {
+            return Err(());
+        }
+
+        // Do the scan itself
+        for i in 1..128 {
+            let frame = EltakoFrame {
+                length: 0xe,
+                rorg: 0xf0,
+                data: 0x00000000,
+                source: 0x00000000,
+                status: i,
+            };
+
+            if self.serial.write(frame).is_err() {
+                return Err(());
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn ask_status(&mut self) -> Result<(), ()> {
+        for i in self.device_list.clone() {
+            let frame = EltakoFrame {
+                length: 0xe,
+                rorg: 0xfe,
+                data: 0x00000000,
+                source: 0x00000000,
+                status: i.id,
+            };
+
+            if self.serial.write(frame).is_err() {
+                return Err(());
+            }
+        }
+        Ok(())
     }
 }
