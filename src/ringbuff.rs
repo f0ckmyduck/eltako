@@ -1,14 +1,15 @@
+use std::cmp::PartialEq;
 use std::fmt::Debug;
 use std::vec::Vec;
 
-#[derive(Debug)]
-pub struct RingBuff<T: Copy> {
+#[derive(PartialEq, Debug)]
+pub struct RingBuff<T: Copy + Debug + PartialEq> {
     data: Vec<T>,
     write_offset: usize,
     read_offset: usize,
     wrap_flag: bool,
 }
-impl<T: Copy + Debug> RingBuff<T> {
+impl<T: Copy + Debug + PartialEq> RingBuff<T> {
     pub fn new(initial_size: usize, initial_value: T) -> Self {
         let mut temp = Vec::new();
 
@@ -35,19 +36,22 @@ impl<T: Copy + Debug> RingBuff<T> {
         }
     }
 
-    pub fn readable(&self) -> bool {
-        if self.read_offset < self.write_offset
-            || self.wrap_flag && self.read_offset > self.write_offset
-        {
-            return true;
+    pub fn readable(&self) -> usize {
+        if self.read_offset < self.write_offset {
+            return self.write_offset - self.read_offset;
         }
-        false
+
+        if self.wrap_flag && self.read_offset > self.write_offset {
+            return self.read_offset - self.write_offset;
+        }
+
+        return 0;
     }
 
     pub fn reduce(&mut self) -> Result<T, ()> {
         let temp = self.data[self.read_offset];
 
-        if self.readable() {
+        if self.readable() >= 1 {
             if self.read_offset < self.data.len() - 1 {
                 self.read_offset += 1;
             } else {
@@ -61,13 +65,34 @@ impl<T: Copy + Debug> RingBuff<T> {
         return Ok(temp.clone());
     }
 
+    pub fn peek(&self) -> T {
+        self.data[self.read_offset]
+    }
+
+    pub fn reduce_search(&mut self, search_term: T) -> Result<(), ()> {
+        loop {
+            if self.peek() == search_term {
+                return Ok(());
+            } else {
+                match self.reduce() {
+                    Ok(_) => {}
+                    Err(_) => {
+                        return Err(());
+                    }
+                }
+            }
+        }
+    }
+
     pub fn reduce_slice(&mut self, size: usize) -> Result<Vec<T>, ()> {
         let mut temp = Vec::with_capacity(size);
 
-        for _ in 0..size {
+        for i in 0..size {
             let current = match self.reduce() {
                 Ok(x) => x,
                 Err(()) => {
+                    let (ret, _) = self.read_offset.overflowing_sub(i);
+                    self.read_offset = ret % self.data.capacity();
                     return Err(());
                 }
             };
@@ -76,23 +101,6 @@ impl<T: Copy + Debug> RingBuff<T> {
         }
 
         Ok(temp)
-    }
-
-    pub fn reset_offset(&mut self) {
-        self.read_offset = 0;
-        self.write_offset = 0;
-    }
-
-    pub fn get_write_offset(&self) -> usize {
-        self.write_offset
-    }
-
-    pub fn get_read_offset(&self) -> usize {
-        self.read_offset
-    }
-
-    pub fn set_read_offset(&mut self, offset: usize) {
-        self.read_offset = offset;
     }
 
     pub fn get_vec(&self) -> Vec<T> {
