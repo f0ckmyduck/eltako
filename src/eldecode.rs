@@ -144,11 +144,14 @@ impl EltakoFrame {
             0xfe => {
                 msg_rorg = "Status";
             }
+            0xfc => {
+                msg_rorg = "Acknowledge";
+            }
             _ => msg_rorg = "",
         }
 
         format!(
-            "rorg:{:<6} -> 0x{:02x} | source_addr:0x{:08x} | status:{:<3} -> 0x{:02x} | data:{} -> 0x{:08x}",
+            "rorg:{:<12} -> 0x{:02x} | source_addr:0x{:08x} | status:{:<3} -> 0x{:02x} | data:{} -> 0x{:08x}",
             msg_rorg, self.rorg,  self.source, msg_status, self.status, msg_data, self.data,
         )
     }
