@@ -48,25 +48,28 @@ impl<T: Copy + Debug + PartialEq> RingBuff<T> {
         return 0;
     }
 
+    pub fn peek(&self) -> T {
+        if self.read_offset < self.data.len() {
+            return self.data[self.read_offset];
+        }
+        return self.data[0];
+    }
+
     pub fn reduce(&mut self) -> Result<T, ()> {
-        let temp = self.data[self.read_offset];
+        let temp = self.peek();
 
         if self.readable() >= 1 {
             if self.read_offset < self.data.len() - 1 {
                 self.read_offset += 1;
             } else {
-                self.wrap_flag = false;
                 self.read_offset = 0;
+                self.wrap_flag = false;
             }
         } else {
             return Err(());
         }
 
         return Ok(temp.clone());
-    }
-
-    pub fn peek(&self) -> T {
-        self.data[self.read_offset]
     }
 
     pub fn reduce_search(&mut self, search_term: T) -> Result<(), ()> {
