@@ -82,6 +82,7 @@ impl SerialInterface {
     pub fn start(&mut self) -> Result<(), ()> {
         use std::io::Read;
         use std::thread;
+        use std::time::Duration;
 
         if self.listener_handle.is_some() {
             return Err(());
@@ -116,7 +117,6 @@ impl SerialInterface {
                     if ret.is_ok() {
                         // Write the used portion of the buffer out to the temporary ring buffer.
                         for i in 0..ret.unwrap() {
-                            debug!("Received: {:#2x}", read_buff[i]);
                             temp.append(read_buff[i]);
                         }
                     }
@@ -138,6 +138,7 @@ impl SerialInterface {
                         }
                         Err(()) => {}
                     }
+                    thread::sleep(Duration::from_micros(100));
                 }
             }) {
             Ok(x) => self.listener_handle = Some(x),

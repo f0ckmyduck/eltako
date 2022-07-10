@@ -1,6 +1,7 @@
 use crate::busio::SerialInterface;
 use crate::device::Device;
 use crate::eldecode::EltakoFrame;
+use log::debug;
 use std::path::Path;
 use std::vec::Vec;
 
@@ -53,6 +54,7 @@ impl Bus {
             if self.serial.write(frame).is_err() {
                 return Err(());
             }
+            debug!("{:?}", frame);
         }
 
         Ok(())
