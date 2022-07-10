@@ -28,12 +28,14 @@ impl SerialInterface {
     /// It uses the nix crate to modify the baudrate and change the attributes of the tty to ignore
     /// control characters.
     pub fn new(path: &Path, baudrate: nix::sys::termios::BaudRate) -> Result<Self, ()> {
-        use nix::fcntl::open;
-        use nix::fcntl::OFlag;
-        use nix::sys::stat::Mode;
-        use nix::sys::termios::{cfmakeraw, cfsetspeed, tcgetattr, tcsetattr};
-        use std::fs::File;
-        use std::os::unix::prelude::FromRawFd;
+        use nix::{
+            fcntl::{open, OFlag},
+            sys::{
+                stat::Mode,
+                termios::{cfmakeraw, cfsetspeed, tcgetattr, tcsetattr},
+            },
+        };
+        use std::{fs::File, os::unix::prelude::FromRawFd};
 
         let fd = match open(path, OFlag::O_RDWR, Mode::empty()) {
             Ok(x) => x,
