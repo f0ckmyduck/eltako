@@ -1,3 +1,5 @@
+use log::info;
+
 mod bus;
 mod busio;
 mod device;
@@ -7,9 +9,11 @@ mod ringbuff;
 fn main() {
     let mut bus = bus::Bus::new();
 
-    // bus.scan().unwrap();
+    bus.scan().unwrap();
+    info!("Scan finished!");
+
     loop {
-        // bus.ask_status().unwrap();
+        bus.ask_status().unwrap();
         std::thread::sleep(std::time::Duration::from_millis(100));
     }
 }

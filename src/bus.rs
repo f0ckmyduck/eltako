@@ -1,6 +1,7 @@
 use crate::busio::SerialInterface;
 use crate::device::Device;
 use crate::eldecode::EltakoFrame;
+use std::path::Path;
 use std::vec::Vec;
 
 pub struct Bus {
@@ -13,7 +14,11 @@ impl Bus {
         env_logger::init();
 
         let mut bus = Bus {
-            serial: SerialInterface::new("/dev/ttyUSB0".to_string(), 57600, 100),
+            serial: SerialInterface::new(
+                Path::new("/dev/ttyUSB0"),
+                nix::sys::termios::BaudRate::B57600,
+            )
+            .unwrap(),
             device_list: Vec::new(),
         };
 

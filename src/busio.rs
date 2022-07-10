@@ -1,6 +1,6 @@
 use crate::ringbuff::RingBuff;
 use log::{debug, error, info};
-use std::string::String;
+use std::path::Path;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
@@ -8,8 +8,7 @@ use std::sync::{Arc, Mutex};
 use crate::eldecode::EltakoFrame;
 
 pub struct SerialShared {
-    refresh_rate: u64,
-    serial_port: Box<dyn serialport::SerialPort>,
+    serial_port: std::fs::File,
 
     pub frame_buffer: RingBuff<EltakoFrame>,
 }
@@ -23,14 +22,43 @@ pub struct SerialInterface {
 
 impl SerialInterface {
     /// Constructs a new SerialInterface struct with a default ring buffer size of 1000 frames.
-    pub fn new(path: String, baudrate: u32, refresh_rate: u64) -> Self {
-        SerialInterface {
-            shared: Arc::new(Mutex::new(SerialShared {
-                refresh_rate,
-                serial_port: serialport::new(path, baudrate)
-                    .open()
-                    .expect("Failed to open port!"),
+    /// It uses the nix crate to modify the baudrate and change the attributes of the tty to ignore
+    /// control characters.
+    pub fn new(path: &Path, baudrate: nix::sys::termios::BaudRate) -> Result<Self, ()> {
+        use nix::fcntl::open;
+        use nix::fcntl::OFlag;
+        use nix::sys::stat::Mode;
+        use nix::sys::termios::{cfmakeraw, cfsetspeed, tcgetattr, tcsetattr};
+        use std::fs::File;
+        use std::os::unix::prelude::FromRawFd;
 
+        let fd = match open(path, OFlag::O_RDWR, Mode::empty()) {
+            Ok(x) => x,
+            Err(_) => {
+                return Err(());
+            }
+        };
+
+        let mut thdata = match tcgetattr(fd) {
+            Ok(x) => x,
+            Err(_) => {
+                return Err(());
+            }
+        };
+
+        cfmakeraw(&mut thdata);
+
+        if cfsetspeed(&mut thdata, baudrate).is_err() {
+            return Err(());
+        }
+
+        if tcsetattr(fd, nix::sys::termios::SetArg::TCSANOW, &thdata).is_err() {
+            return Err(());
+        }
+
+        Ok(SerialInterface {
+            shared: Arc::new(Mutex::new(SerialShared {
+                serial_port: unsafe { File::from_raw_fd(fd) },
                 frame_buffer: RingBuff::new(
                     1000,
                     EltakoFrame {
@@ -45,16 +73,15 @@ impl SerialInterface {
 
             exit: Arc::new(AtomicBool::new(false)),
             listener_handle: None,
-        }
+        })
     }
 
     /// Starts the listener thread.
     /// The listener thread reads serial data into a temporary buffer. This data is furthermore
     /// decoded using the EltakoFrame struct and saved in a ring buffer which is public.
     pub fn start(&mut self) -> Result<(), ()> {
+        use std::io::Read;
         use std::thread;
-        use std::thread::sleep;
-        use std::time::Duration;
 
         if self.listener_handle.is_some() {
             return Err(());
@@ -92,10 +119,6 @@ impl SerialInterface {
                             debug!("Received: {:#2x}", read_buff[i]);
                             temp.append(read_buff[i]);
                         }
-                    } else {
-                        let refresh_rate = shared_lock.lock().unwrap().refresh_rate;
-
-                        sleep(Duration::from_millis(refresh_rate));
                     }
 
                     match temp.reduce_search(0xa5) {
@@ -127,12 +150,17 @@ impl SerialInterface {
     }
 
     pub fn write(&mut self, frame: EltakoFrame) -> Result<(), ()> {
+        use std::io::Write;
+
         let shared_lock = self.shared.clone();
         let mut shared = shared_lock.lock().unwrap();
 
-        if shared.serial_port.write_all(&frame.to_vec()[..]).is_err() {
-            error!("Failed to write: {:x?}", frame);
-            return Err(());
+        match shared.serial_port.write(&frame.to_vec()[..]) {
+            Ok(_) => {}
+            Err(x) => {
+                error!("Failed to write: {:x?} -> {}", frame, x);
+                return Err(());
+            }
         }
         Ok(())
     }
