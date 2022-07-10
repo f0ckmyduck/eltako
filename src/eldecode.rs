@@ -1,6 +1,5 @@
 use log::error;
-use std::string::String;
-use std::vec::Vec;
+use std::{string::String, vec::Vec};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct EltakoFrame {

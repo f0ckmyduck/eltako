@@ -1,6 +1,4 @@
-use std::cmp::PartialEq;
-use std::fmt::Debug;
-use std::vec::Vec;
+use std::{cmp::PartialEq, fmt::Debug, vec::Vec};
 
 #[derive(PartialEq, Debug)]
 pub struct RingBuff<T: Copy + Debug + PartialEq> {

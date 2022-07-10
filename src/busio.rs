@@ -1,9 +1,12 @@
 use crate::ringbuff::RingBuff;
 use log::{debug, error, info};
-use std::path::Path;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
-use std::sync::{Arc, Mutex};
+use std::{
+    path::Path,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        {Arc, Mutex},
+    },
+};
 
 use crate::eldecode::EltakoFrame;
 

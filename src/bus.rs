@@ -1,9 +1,6 @@
-use crate::busio::SerialInterface;
-use crate::device::Device;
-use crate::eldecode::EltakoFrame;
+use crate::{busio::SerialInterface, device::Device, eldecode::EltakoFrame};
 use log::debug;
-use std::path::Path;
-use std::vec::Vec;
+use std::{path::Path, vec::Vec};
 
 pub struct Bus {
     serial: SerialInterface,
