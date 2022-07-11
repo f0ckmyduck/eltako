@@ -6,7 +6,7 @@ pub mod premaid {
 
     pub const fn scan_start() -> EltakoFrame {
         EltakoFrame {
-            length: 0xe,
+            length: 0xd,
             rorg: 0xf0,
             data: 0x01028708,
             source: 0x04065200,
@@ -16,7 +16,7 @@ pub mod premaid {
 
     pub const fn scan_members(index: u8) -> EltakoFrame {
         EltakoFrame {
-            length: 0xe,
+            length: 0xd,
             rorg: 0xf0,
             data: 0x00000000,
             source: 0x00000000,
@@ -26,8 +26,8 @@ pub mod premaid {
 
     pub const fn status(index: u8) -> EltakoFrame {
         EltakoFrame {
-            length: 0xe,
-            rorg: 0xfc,
+            length: 0xd,
+            rorg: 0xfe,
             data: 0x00000000,
             source: 0x00000000,
             status: index,
@@ -36,7 +36,7 @@ pub mod premaid {
 
     pub const fn acknowledge(index: u8) -> EltakoFrame {
         EltakoFrame {
-            length: 0xe,
+            length: 0xd,
             rorg: 0xfc,
             data: 0x00000000,
             source: 0x00000000,
@@ -92,7 +92,7 @@ impl EltakoFrame {
     }
 
     pub fn from_vec(frame: &[u8]) -> Result<Self, ()> {
-        if frame.len() < 14 {
+        if frame.len() == 0xd {
             return Err(());
         }
 
