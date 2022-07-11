@@ -134,7 +134,7 @@ impl SerialInterface {
                                 if let Ok(frame) = decoded_frame {
                                     let mut shared = shared_lock.lock().unwrap();
 
-                                    info!("{}", frame.explain());
+                                    info!("R: {}", frame.explain());
                                     shared.frame_buffer.append(frame);
                                 } else {
                                     error!("Decode failed on data: {:x?}", frame_bytes);
@@ -162,7 +162,9 @@ impl SerialInterface {
         let mut shared = shared_lock.lock().unwrap();
 
         match shared.serial_port.write(&frame.to_vec()[..]) {
-            Ok(_) => {}
+            Ok(_) => {
+                info!("W: {}", frame.explain());
+            }
             Err(x) => {
                 error!("Failed to write: {:x?} -> {}", frame, x);
                 return Err(());
