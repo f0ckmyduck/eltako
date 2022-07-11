@@ -1,6 +1,50 @@
 use log::error;
 use std::{string::String, vec::Vec};
 
+pub mod premaid {
+    use crate::eldecode::EltakoFrame;
+
+    pub const fn scan_start() -> EltakoFrame {
+        EltakoFrame {
+            length: 0xe,
+            rorg: 0xf0,
+            data: 0x01028708,
+            source: 0x04065200,
+            status: 0x00,
+        }
+    }
+
+    pub const fn scan_members(index: u8) -> EltakoFrame {
+        EltakoFrame {
+            length: 0xe,
+            rorg: 0xf0,
+            data: 0x00000000,
+            source: 0x00000000,
+            status: index,
+        }
+    }
+
+    pub const fn status(index: u8) -> EltakoFrame {
+        EltakoFrame {
+            length: 0xe,
+            rorg: 0xfc,
+            data: 0x00000000,
+            source: 0x00000000,
+            status: index,
+        }
+    }
+
+    pub const fn acknowledge(index: u8) -> EltakoFrame {
+        EltakoFrame {
+            length: 0xe,
+            rorg: 0xfc,
+            data: 0x00000000,
+            source: 0x00000000,
+            status: index,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct EltakoFrame {
     pub length: u8,

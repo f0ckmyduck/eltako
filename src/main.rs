@@ -7,13 +7,10 @@ mod eldecode;
 mod ringbuff;
 
 fn main() {
-    let mut bus = bus::Bus::new();
-
-    bus.scan().unwrap();
-    info!("Scan finished!");
+    let mut bus = bus::Bus::new(bus::Mode::Master(bus::Master::AckStatus));
 
     loop {
-        bus.ask_status().unwrap();
+        bus.routine().unwrap();
         std::thread::sleep(std::time::Duration::from_millis(100));
     }
 }
