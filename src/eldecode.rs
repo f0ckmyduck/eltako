@@ -4,6 +4,14 @@ use std::{string::String, vec::Vec};
 pub mod premaid {
     use crate::eldecode::EltakoFrame;
 
+    pub enum Positions {
+        TopRight = 0x70,
+        TopLeft = 0x30,
+        BotLeft = 0x10,
+        BotRight = 0x50,
+        Nothing = 0x00,
+    }
+
     pub const fn scan_start() -> EltakoFrame {
         EltakoFrame {
             length: 0xd,
@@ -41,6 +49,16 @@ pub mod premaid {
             data: 0x00000000,
             source: 0x00000000,
             status: index,
+        }
+    }
+
+    pub const fn button(source_address: u32, status: bool, position: Positions) -> EltakoFrame {
+        EltakoFrame {
+            length: 0xd,
+            rorg: 0x05,
+            data: 0x00000000 | (position as u32) << 24,
+            source: source_address,
+            status: if status { 0x30 } else { 0x20 },
         }
     }
 }
