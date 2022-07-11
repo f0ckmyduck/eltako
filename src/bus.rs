@@ -17,7 +17,7 @@ pub enum Mode {
 pub struct Bus {
     init: bool,
     op_mode: Mode,
-    serial: SerialInterface,
+    pub serial: SerialInterface,
     pub device_list: Vec<Device>,
 }
 
